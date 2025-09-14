@@ -35,12 +35,40 @@ def compute_image_gradients(image_bw: np.ndarray) -> Tuple[np.ndarray, np.ndarra
             w.r.t. y-direction
     """
 
+
     ###########################################################################
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
     
-    raise NotImplementedError('`compute_image_gradients` function in ' +
-        '`part1_harris_corner.py` needs to be implemented')
+    # b/c the outputs have to be the same size as the input we need to pad, we'll do that in the 2d convolution
+    padding_size = 1 # hardcode for 3x3 sobel filters
+
+    # convert to tensor and add batch & channel dims
+    image_bw = torch.from_numpy(image_bw).unsqueeze(0).unsqueeze(0)
+
+    # add out_channels, in_channels, both of which are 1
+    x_kernel = torch.from_numpy(SOBEL_X_KERNEL).unsqueeze(0).unsqueeze(0)
+    y_kernel = torch.from_numpy(SOBEL_Y_KERNEL).unsqueeze(0).unsqueeze(0)
+
+    # using functional b/c we're not doing any training/parameter updates
+    Ix = torch.nn.functional.conv2d(
+        input=image_bw,
+        weight=x_kernel,
+        padding=padding_size,
+        groups=1,
+        stride=1
+    )
+
+    Iy = torch.nn.functional.conv2d(
+        input=image_bw,
+        weight=y_kernel,
+        padding=padding_size,
+        groups=1,
+        stride=1
+    )
+
+    Ix = Ix.squeeze().numpy()
+    Iy = Iy.squeeze().numpy()
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -170,8 +198,12 @@ def compute_harris_response_map(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`compute_harris_response_map` function in ' +
-        '`part1_harris_corner.py` needs to be implemented')
+    sx2, sy2, sxsy = second_moments(image_bw, ksize, sigma) # this is the S_xx, S_yy, S_xy, which are a weighted sum of gradients in window ksize x ksize
+
+    det = sx2 * sy2 - sxsy * sxsy # determinant of a 2d matrix should be easy & stable 
+    trace = sx2 + sy2 # trace of a 2d matrix is easy
+
+    R = det - alpha * (trace ** 2)
 
     ###########################################################################
     #                           END OF YOUR CODE                              #
@@ -342,8 +374,20 @@ def get_harris_interest_points(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_harris_interest_points` function in ' +
-        '`part1_harris_corner.py` needs to be implemented')
+    R = compute_harris_response_map(image_bw, ksize=7, sigma=5, alpha=0.05) # passing in defaults
+    R_min = R.min()
+    R_max = R.max()
+    R = (R - R_min) / (R_max - R_min) # normalize to [0,1]
+
+    x, y, c = nms_maxpool_pytorch(R, k, 7) # k is the max number of interest points to retrieve
+    x, y, c = remove_border_vals(image_bw, x, y, c)
+
+    # sort by confidence, use argsort so we can use for indexing x and y
+    # ind = torch.argsort(torch.from_numpy(c), descending=True) # looks like this is already done in nms_maxpool_pytorch, but to be safe, I'll do it again
+    # x = x[ind][:k]
+    # y = y[ind][:k]
+    # c = c[ind][:k]
+
 
     ###########################################################################
     #                           END OF YOUR CODE                              #
