@@ -1,2 +1,4 @@
 /data
 tests/small_data/
+*.pyc
+*.zip
