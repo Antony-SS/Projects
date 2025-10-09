@@ -70,11 +70,9 @@ def calculate_projection_matrix(
     ###########################################################################
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
-
-    raise NotImplementedError(
-        "`calculate_projection_matrix` function in "
-        + "`projection_matrix.py` needs to be implemented"
-    )
+    A = assemble_matrix(points_2d, points_3d)
+    U, S, Vt = np.linalg.svd(A)
+    M = Vt[-1].reshape(3, 4)
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -103,9 +101,10 @@ def projection(P: np.ndarray, points_3d: np.ndarray) -> np.ndarray:
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError(
-        "`projection` function in " + "`projection_matrix.py` needs to be implemented"
-    )
+    points_3d_homogenous = np.hstack([points_3d, np.ones((points_3d.shape[0], 1), dtype=float)])
+    projected_points_2d_homogenous = points_3d_homogenous @ P.T # should give an 3XN output
+    projected_points_2d = projected_points_2d_homogenous[:, :2] / projected_points_2d_homogenous[:, 2:3] # 2 X N
+
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -131,12 +130,13 @@ def calculate_camera_center(M: np.ndarray) -> np.ndarray:
     ###########################################################################
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
-
-    raise NotImplementedError(
-        "`calculate_camera_center` function in "
-        + "`projection_matrix.py` needs to be implemented"
-    )
-
+    Q = M[:, :3]
+    m4 = M[:, 3]
+    try:
+        cc = -np.linalg.solve(Q, m4)
+    except:
+        cc = None # return none if solve fails, but this shouldn't happen with the nice examples we're being given
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

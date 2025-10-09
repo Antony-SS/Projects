@@ -77,8 +77,25 @@ def match_features_ratio_test(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`match_features_ratio_test` function in ' +
-        '`part3_feature_matching.py` needs to be implemented')
+    dists = compute_feature_distances(features1, features2) # n1 by n2, where entry i, j is the distance between features1[i] and features2[j]
+    matches = []
+    confidences = []
+    ratio = 0.85 # hardcoded ratio test
+    for i, dist in enumerate(dists):
+        sorted_dist_indices = np.argsort(dist)
+        closest_idx = sorted_dist_indices[0] # closest feaeture in features2 to features1[i]
+        second_closest_idx = sorted_dist_indices[1]
+        if dist[closest_idx] / dist[second_closest_idx] < ratio: # want this to be low
+            matches.append((i, closest_idx))
+            confidences.append(dist[closest_idx])
+
+    matches = np.array(matches)
+    confidences = np.array(confidences)
+
+    # sort by confidence, use argsort so we can use for indexing x and y
+    ind = np.argsort(confidences)[::-1] # descending order
+    matches = matches[ind]
+    confidences = confidences[ind]
 
     ###########################################################################
     #                             END OF YOUR CODE                            #

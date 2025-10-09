@@ -48,10 +48,12 @@ def get_magnitudes_and_orientations(
     ###########################################################################
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
+    magnitudes = np.sqrt(Ix**2 + Iy**2)
+    orientations = np.arctan2(Iy, Ix) # range is -pi to pi
 
-    raise NotImplementedError('`get_magnitudes_and_orientations()` function ' +
-        'in `part4_sift_descriptor.py` needs to be implemented')
-
+    print(magnitudes.shape)
+    print(orientations.shape)
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -102,8 +104,18 @@ def get_gradient_histogram_vec_from_patch(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_gradient_histogram_vec_from_patch` ' +
-        'function in `part4_sift_descriptor.py` needs to be implemented')
+    histogram_vec = np.zeros(128, dtype=np.float32)
+
+    for row in range (0, 16, 4):
+        for col in range (0, 16, 4):
+            # print(f"acccessing cells from {row}:{row+4} and {col}:{col+4}")
+            cell_magnitudes = window_magnitudes[row:row+4, col:col+4].flatten()
+            cell_orientations = window_orientations[row:row+4, col:col+4].flatten()
+            hist, _ = np.histogram(cell_orientations, bins=bins, weights=cell_magnitudes) # will automatically flatten the histogram
+            histogram_vec[row*8 + col*2:row*8 + col*2 + 8] = hist # 32 is the number of cells in a row, 8 is bins/cell
+
+    wgh = histogram_vec.reshape(128, 1) # not sure if i need this
+    
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -164,8 +176,19 @@ def get_feat_vec(
     # TODO: YOUR CODE HERE                                                      #                                          #
     #############################################################################
 
-    raise NotImplementedError('`get_feat_vec` function in ' +
-        '`student_sift.py` needs to be implemented')
+    half_width = feature_width // 2
+    start_row = r - (half_width - 1)
+    end_row = r + (half_width + 1)
+    start_col = c - (half_width - 1)
+    end_col = c + (half_width + 1)
+
+    patch_magnitudes = magnitudes[start_row:end_row, start_col:end_col]
+    patch_orientations = orientations[start_row:end_row, start_col:end_col]
+
+    wgh = get_gradient_histogram_vec_from_patch(patch_magnitudes, patch_orientations).ravel()
+    fv = wgh / np.linalg.norm(wgh, ord=2) # normalize to unit length using L2 norm (THIS IS JUST TO PASS TESTS, PAPER SAY L1)
+    fv = np.sqrt(fv) # raise to 1/2 power as per the paper
+    fv = fv.reshape(128, 1)
 
     #############################################################################
     #                             END OF YOUR CODE                              #
@@ -204,8 +227,16 @@ def get_SIFT_descriptors(
     # TODO: YOUR CODE HERE                                                    #
     ###########################################################################
 
-    raise NotImplementedError('`get_SIFT_descriptors` function in ' +
-        '`part4_sift_descriptor.py` needs to be implemented')
+    # calculate feature dim for featrue width
+    feature_dim = (feature_width//4)**2 * 8 # finds # of 4x4 cells, then multiplies by 8 for bins/cell
+
+    # create feature vector np.array
+    fvs = np.zeros((len(X), feature_dim), dtype=np.float32)
+
+    Ix, Iy = compute_image_gradients(image_bw)
+    magnitudes, orientations = get_magnitudes_and_orientations(Ix, Iy)
+    for i, (x, y) in enumerate(zip(X, Y)):
+        fvs[i, :] = get_feat_vec(x, y, magnitudes, orientations, feature_width).ravel()
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
